@@ -2,7 +2,7 @@ use crossterm::event::{poll, read, Event, KeyCode};
 use crossterm::{cursor, terminal, style};
 use crossterm::style::Color;
 use crossterm::{execute, queue};
-use rand::random;
+use fastrand;
 use std::collections::vec_deque::VecDeque;
 use std::io::{self, Write};
 use std::thread::sleep;
@@ -10,7 +10,7 @@ use std::time::Duration;
 
 const DROP_TIME: usize = 20;
 const COLOR_NUM: usize = 30;
-const COLOR_SPEED: usize = 2; // smaller is faster
+const COLOR_SPEED: usize = 1; // smaller is faster
 const COLORS: [Color; COLOR_NUM] = [
     Color::AnsiValue(196),
     Color::AnsiValue(202),
@@ -51,7 +51,7 @@ fn main() -> io::Result<()> {
     let (mut w, mut h) = terminal::size()?;
     let mut drops: Vec<(usize, VecDeque<(u32, u16, u16)>)> =
         (0..(w / 2)).map( |_| (
-            random::<usize>() % DROP_TIME + DROP_TIME,
+            fastrand::usize(0..DROP_TIME),
             VecDeque::new()
         )).collect();
 
@@ -69,7 +69,7 @@ fn main() -> io::Result<()> {
                     h = nh;
                     while (drops.len() as u16) < w / 2 {
                         drops.push((
-                            random::<usize>() % DROP_TIME + DROP_TIME,
+                            fastrand::usize(DROP_TIME..DROP_TIME*2),
                             VecDeque::new()
                         ));
                     }
@@ -80,9 +80,12 @@ fn main() -> io::Result<()> {
         }
         for (x, (timer, column)) in drops.iter_mut().enumerate() {
             if *timer == 0 {
-                *timer = random::<usize>() % DROP_TIME + DROP_TIME;
-                let height = random::<usize>() % (DROP_TIME / 2) + (DROP_TIME / 2);
-                column.push_front((random::<u32>() % (COLOR_NUM << COLOR_SPEED) as u32, 0, height as u16));
+                *timer = fastrand::usize(DROP_TIME..DROP_TIME*2); 
+                column.push_front((
+                    fastrand::u32(0..(COLOR_NUM << COLOR_SPEED) as u32),
+                    0,
+                    fastrand::u16((DROP_TIME/2) as u16..(DROP_TIME-1) as u16)
+                ));
             }
             *timer -= 1;
 
@@ -93,7 +96,7 @@ fn main() -> io::Result<()> {
             }
             for (color, position, height) in column.iter_mut() {
                 if x * 2 < w as usize {
-                    let character = (32 + random::<u8>() % 94) as char;
+                    let character = fastrand::u8(33..=126) as char;
                     if *position < h {
                         queue!(stdout,
                             cursor::MoveTo(x as u16 * 2, *position as u16),
