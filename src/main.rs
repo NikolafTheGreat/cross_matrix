@@ -4,14 +4,15 @@ use crossterm::style::Color;
 use crossterm::{execute, queue};
 use fastrand;
 use std::collections::vec_deque::VecDeque;
-use std::io::{self, Write};
+use std::io::{self, Write, BufRead, BufReader};
 use std::thread::sleep;
 use std::time::Duration;
+use std::fs::File;
+use std::env;
 
 const DROP_TIME: usize = 20;
-const COLOR_NUM: usize = 30;
 const COLOR_SPEED: usize = 1; // smaller is faster
-const COLORS: [Color; COLOR_NUM] = [
+const BUILTIN_COLORS: [Color; 30] = [
     Color::AnsiValue(196),
     Color::AnsiValue(202),
     Color::AnsiValue(208),
@@ -44,6 +45,18 @@ const COLORS: [Color; COLOR_NUM] = [
     Color::AnsiValue(197)
 ];
 fn main() -> io::Result<()> {
+    let mut colors = Vec::new();
+    let (color_num, colors) = if let Some(file) = env::args().skip(1).next() {
+        let file = File::open(file)?;
+        let file = BufReader::new(file);
+        for line in file.lines() {
+            colors.push(Color::AnsiValue(line?.parse().expect("Unexpected element in file")));
+        }
+        (colors.len(), &colors[..])
+    } else {
+        let slice = &BUILTIN_COLORS[..];
+        (slice.len(), slice)
+    };
     let mut stdout = io::stdout();
     terminal::enable_raw_mode()?;
     execute!(stdout, terminal::EnterAlternateScreen, cursor::Hide)?;
@@ -82,7 +95,7 @@ fn main() -> io::Result<()> {
             if *timer == 0 {
                 *timer = fastrand::usize(DROP_TIME..DROP_TIME*2); 
                 column.push_front((
-                    fastrand::u32(0..(COLOR_NUM << COLOR_SPEED) as u32),
+                    fastrand::u32(0..(color_num << COLOR_SPEED) as u32),
                     0,
                     fastrand::u16((DROP_TIME/2) as u16..(DROP_TIME-1) as u16)
                 ));
@@ -100,14 +113,14 @@ fn main() -> io::Result<()> {
                     if *position < h {
                         queue!(stdout,
                             cursor::MoveTo(x as u16 * 2, *position as u16),
-                            style::SetForegroundColor(COLORS[(*color as usize) >> COLOR_SPEED]),
+                            style::SetForegroundColor(colors[(*color as usize) >> COLOR_SPEED]),
                             style::Print(character),
                         )?;
                     }
                     if *position < h - 1 {
                         queue!(stdout,
                             cursor::MoveTo(x as u16 * 2, *position as u16 + 1),
-                            style::SetForegroundColor(Color::White),
+                            style::SetForegroundColor(Color::AnsiValue(231)),
                             style::Print(character),
                         )?;
                     }
@@ -119,7 +132,7 @@ fn main() -> io::Result<()> {
                     }
                 }
                 *position += 1;
-                *color = (*color + 1) % (COLOR_NUM << COLOR_SPEED) as u32;
+                *color = (*color + 1) % (color_num << COLOR_SPEED) as u32;
             }
         }
         stdout.flush()?;
