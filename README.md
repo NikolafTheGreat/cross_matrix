@@ -14,4 +14,6 @@ If you want to you can pass it the path to a file containing a different color s
 This file must be a series of 8-bit numbers separated by new line characters.
 These numbers will be interpreted as ANSI 256 colors.
 
+```trans_colors.txt``` is such a file containing a set of colors inspired by the trans pride flag.
+
 Any more arguments passed to the program will be ignored.
