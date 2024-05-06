@@ -10,6 +10,7 @@ use std::time::Duration;
 
 const DROP_TIME: usize = 20;
 const COLOR_NUM: usize = 30;
+const COLOR_SPEED: usize = 2; // smaller is faster
 const COLORS: [Color; COLOR_NUM] = [
     Color::AnsiValue(196),
     Color::AnsiValue(202),
@@ -81,7 +82,7 @@ fn main() -> io::Result<()> {
             if *timer == 0 {
                 *timer = random::<usize>() % DROP_TIME + DROP_TIME;
                 let height = random::<usize>() % (DROP_TIME / 2) + (DROP_TIME / 2);
-                column.push_front((random::<u32>() % COLOR_NUM as u32, 0, height as u16));
+                column.push_front((random::<u32>() % (COLOR_NUM << COLOR_SPEED) as u32, 0, height as u16));
             }
             *timer -= 1;
 
@@ -96,7 +97,7 @@ fn main() -> io::Result<()> {
                     if *position < h {
                         queue!(stdout,
                             cursor::MoveTo(x as u16 * 2, *position as u16),
-                            style::SetForegroundColor(COLORS[*color as usize]),
+                            style::SetForegroundColor(COLORS[(*color as usize) >> COLOR_SPEED]),
                             style::Print(character),
                         )?;
                     }
@@ -115,7 +116,7 @@ fn main() -> io::Result<()> {
                     }
                 }
                 *position += 1;
-                *color = (*color + 1) % COLOR_NUM as u32;
+                *color = (*color + 1) % (COLOR_NUM << COLOR_SPEED) as u32;
             }
         }
         stdout.flush()?;
